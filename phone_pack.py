@@ -39,7 +39,7 @@ class DataConverter(object):
             "电信虚拟运营商": 4,
             "联通虚拟运营商": 5,
             "移动虚拟运营商": 6,
-            "未知运营商": 7,
+            "未知电信运营商": 7,
         }
 
         if cvs_file is None:
