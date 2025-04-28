@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 import argparse
+import collections
 import os
 import struct
-import codecs
-import csv
-import collections
-
 from datetime import datetime
 
+import pandas as pd
+
 __author__ = 'brian'
-__version__ = '1.0.0'
+__version__ = '1.1.0'
 
 
 class DataConverter(object):
@@ -31,46 +30,54 @@ class DataConverter(object):
 
         self.carriers = {
             "移动": 1,
-            "联通": 2,
-            "电信": 3,
             "中国移动": 1,
             "中国联通": 2,
             "中国电信": 3,
-            "电信虚拟运营商": 4,
-            "联通虚拟运营商": 5,
-            "移动虚拟运营商": 6,
-            "未知电信运营商": 7,
+            "中国电信/虚拟运营商": 4,
+            "中国联通/虚拟运营商": 5,
+            "联通/虚拟": 5,
+            "中国移动/虚拟运营商": 6,
+            "中国广电": 7,
+            "中国广电/虚拟运营商": 8,
+            "中国电信/物联网卡": 20,
+            "中国联通/物联网卡": 21,
+            "联通/物联网": 21,
+            "中国移动/物联网卡": 22,
+            "中国电信/数据上网卡": 23,
+            "中国电信/数据上网卡/物联网卡": 23,
+            "中国联通/数据上网卡": 24,
+            "中国移动/数据上网卡": 25,
+            "中国电信/卫星电话卡": 26,
+            "中国联通/卫星电话卡": 27,
+            "中国移动/卫星电话卡": 28,
+            "应急通信/卫星电话卡": 29,
+            "工信/卫星电话卡": 30,
+            "未知运营商": 99
         }
 
         if cvs_file is None:
-            self.cvs_file = os.path.join(os.path.dirname(__file__), "mobile.1810.csv")
+            self.cvs_file = os.path.join(os.path.dirname(__file__), "phone.2503.csv")
 
-        # index offset
-        index_offset = self.head_fmt_length
+        # "id", "pref", "phone", "province", "city", "isp", "isp_type", "post_code", "city_code", "area_code", "create_time"
+        # "1", "130", "1300000", "山东", "济南", "中国联通", "2", "250000", "0531", "370100", "2025/3/4 14:50:26"
+        # 记录区 中每条记录的格式为"<省份>|<城市>|<邮编>|<长途区号>\0"。 每条记录以'\0'结束；
+        # 索引区 中每条记录的格式为"<手机号前七位><记录区的偏移><卡类型>"，每个索引的长度为9个字节；
 
-        with codecs.open(self.cvs_file, mode='r') as FILE:
-            reader = csv.reader(FILE)
-            for row in reader:
-                self.phone_record_count = self.phone_record_count + 1
-                # if self.phone_record_count >10:
-                #     break
+        df = pd.read_csv(self.cvs_file, dtype={'city_code': str, 'post_code': str}, encoding='utf-8', low_memory=False)
+        for index, row in df.iterrows():
+            self.phone_record_count = self.phone_record_count + 1
 
-                # no    prefix      province    city     carrier   region      zipCode
-                # 1     1300000	    山东         济南     中国联通    531         250000
-                # 记录区 中每条记录的格式为"<省份>|<城市>|<邮编>|<长途区号>\0"。 每条记录以'\0'结束；
-                # 索引区 中每条记录的格式为"<手机号前七位><记录区的偏移><卡类型>"，每个索引的长度为9个字节；
-                no = int(row[1])
+            no = int(row["phone"])
 
-                carrier = self.carriers.get(row[4], 7)
-                dat_str = "{}|{}|{}|{}\0".format(row[2], row[3], row[6], str(row[5]))
-                idx_name = "{}.{}.{}".format(row[0], row[1], row[6])
+            carrier = self.carriers.get(row["isp"], 99)
+            dat_str = "{}|{}|{}|{}\0".format(row["province"], row["city"], row["post_code"], str(row["city_code"]))
 
-                self.table[no] = {
-                    "no": no,
-                    "carrier": carrier,
-                    "data": dat_str,
-                }
-                self.tableData[dat_str] = 0
+            self.table[no] = {
+                "no": no,
+                "carrier": carrier,
+                "data": dat_str,
+            }
+            self.tableData[dat_str] = 0
 
     def pack(self):
         # ### 手机号归属地查询
@@ -88,18 +95,19 @@ class DataConverter(object):
         # 3. 索引区 中每条记录的格式为"<手机号前七位><记录区的偏移><卡类型>"，每个索引的长度为9个字节；
 
         with open(self.out_file, "wb") as FILE:
-            # pack data
-            # 记录数据多条重复, 合并记录区
-            data_buffer = b''
-            index_offset = self.head_fmt_length
+            # Prepare to pack data
+            data_buffer = b''  # Buffer for the record data
+            index_offset = self.head_fmt_length  # Start index offset after the header
             for key, value in self.tableData.items():
-                # 计算索引offset
+                # Calculate the index offset for each record
                 self.tableData[key] = index_offset
+                # Encode as utf-8
+                key = key.encode('utf-8')
                 index_offset = index_offset + len(key)
-                # 组合记录区数据
+                # Append the record data to the buffer
                 data_buffer += struct.pack(str(len(key)) + "s", key)
 
-            # 设置索引offset
+            # set the first index offset
             self.first_index_offset = index_offset
 
             # pack header

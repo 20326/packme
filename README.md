@@ -1,21 +1,25 @@
 
 PackMe
 ----------------------------
-手机归属地数据打包(中国)
+手机归属地数据库打包(中国)
 
 ### 快速使用
 
 ```shell script
 
-python phone_pack.py -i mobile.1810.csv -o phone.1810.dat -v 1810
-Version: 1810
-File: phone.1810.dat
-Size: 3747097
-Count: 415284
+python phone_pack.py -i phone.2503.csv -o phone.2503.dat -v 2503
+Version: 2503
+File: phone.2503.dat
+Size: 4652693
+Count: 515858
+
 
 ```
 
-    注意: mobile.1810.csv版本格式要求
+    注意: phone.2503.csv 版本格式要求
+
+### 数据来源
+* [dannyhu926/phone_location](https://github.com/dannyhu926/phone_location/blob/master/mysql/phone_location.sql)
 
 ### 兼容版本
 
@@ -54,14 +58,28 @@ Count: 415284
  
 定义的卡类型为:
 
-* 1 移动
-* 2 联通
-* 3 电信
-* 4 电信虚拟运营商
-* 5 联通虚拟运营商
-* 6 移动虚拟运营商
-* 7 未知运营商
+* 1 中国移动
+* 2 中国联通
+* 3 中国电信
+* 4 中国电信/虚拟运营商
+* 5 中国联通/虚拟运营商
+* 6 中国移动/虚拟运营商
+* 7 中国广电
+* 8 中国广电/虚拟运营商
 
+新增定义!
+* 20 中国电信/物联网卡
+* 21 中国联通/物联网卡
+* 22 中国移动/物联网卡
+* 23 中国电信/数据上网卡
+* 24 中国联通/数据上网卡
+* 25 中国移动/数据上网卡
+* 26 中国电信/卫星电话卡
+* 27 中国联通/卫星电话卡
+* 28 中国移动/卫星电话卡
+* 29 应急通信/卫星电话卡
+* 30 工信/卫星电话卡
+* 99 未知运营商
 
 ## License
 
